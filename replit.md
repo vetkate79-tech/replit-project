@@ -1,6 +1,6 @@
-# [Project name]
+# 新語辞典
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+海外発の新概念や日本語表記が定まっていない語を、出典・表記区分・関係語とともに整理する和文辞典。
 
 ## Run & Operate
 
@@ -26,15 +26,20 @@ _Populate as you build — short repo map plus pointers to the source-of-truth f
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- API契約を先に変更し、Orvalでクライアント型とZodスキーマを再生成する。
+- 公開検索は、見出し・別名・意味キーワード・カテゴリ・表記の近さを統合して候補順位とヒット理由を返す。
+- 類似語と対義・対比語は、存在する辞書項目のslugを使う相互リンクとして管理する。
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- 概念、カテゴリー、類似語、対義語、表記ゆれ・読み方の5導線から検索できる。
+- 一覧で定義、カテゴリ、別表記、候補度、ヒット理由、関係語の有無を確認できる。
+- 詳細ページから関係語とカテゴリ階層を回遊できる。
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- 公開側は現代的なSaaS風ではなく、独自の和文辞典・百科事典調を保つ。明朝体、温かい紙色、細い罫線、索引感、十分な余白を使い、過度な角丸や装飾を避ける。
+- 特定の既存辞典の商標、ロゴ、紙面はコピーしない。スマホでは読みやすさと検索結果への到達を最優先する。
 
 ## Gotchas
 

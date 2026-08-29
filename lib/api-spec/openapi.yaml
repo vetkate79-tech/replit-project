@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: words
+    description: Dictionary entries and candidate workflow
+  - name: dashboard
+    description: Editorial dashboard summaries
+  - name: seo
+    description: Machine-readable discovery feeds
 paths:
   /healthz:
     get:
@@ -24,6 +30,201 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /words:
+    get:
+      operationId: listWords
+      tags: [words]
+      summary: List dictionary words
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: categoryLarge
+          in: query
+          schema:
+            type: string
+        - name: categoryMiddle
+          in: query
+          schema:
+            type: string
+        - name: categorySmall
+          in: query
+          schema:
+            type: string
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: searchMode
+          in: query
+          schema:
+            type: string
+            enum: [concept, category, similar, antonym, spelling]
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/WordStatus"
+        - name: entryType
+          in: query
+          schema:
+            $ref: "#/components/schemas/WordEntryType"
+        - name: publicOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, popular, trending]
+            default: newest
+      responses:
+        "200":
+          description: Word entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Word"
+    post:
+      operationId: createWord
+      tags: [words]
+      summary: Create a dictionary candidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordInput"
+      responses:
+        "201":
+          description: Created word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+  /search/inference:
+    get:
+      operationId: getSearchInference
+      tags: [words]
+      summary: Infer search intent and return the strongest dictionary candidates
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 300
+      responses:
+        "200":
+          description: Intent-aware candidates with explicit uncertainty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchInference"
+  /words/{id}:
+    get:
+      operationId: getWord
+      tags: [words]
+      summary: Get a word by slug or numeric id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Word entry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Word not found
+    patch:
+      operationId: updateWord
+      tags: [words]
+      summary: Update a word or move its workflow status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WordUpdate"
+      responses:
+        "200":
+          description: Updated word
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Word"
+        "404":
+          description: Word not found
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get editorial workflow summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [words]
+      summary: List word categories with counts
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+  /sitemap.xml:
+    get:
+      operationId: getSitemap
+      tags: [seo]
+      summary: Get the public dictionary sitemap
+      responses:
+        "200":
+          description: XML sitemap
+          content:
+            application/xml:
+              schema:
+                type: string
+  /feed.xml:
+    get:
+      operationId: getFeed
+      tags: [seo]
+      summary: Get the public dictionary RSS feed
+      responses:
+        "200":
+          description: RSS feed
+          content:
+            application/rss+xml:
+              schema:
+                type: string
 components:
   schemas:
     HealthStatus:
@@ -33,4 +234,620 @@ components:
           type: string
       required:
         - status
+    WordStatus:
+      type: string
+      enum: [candidate, researching, naming, published, observing]
+    WordEntryType:
+      type: string
+      enum: [variation, untranslated, neologism, meaning_shift]
+    ConfidenceLevel:
+      type: string
+      enum: [low, medium, high]
+    WordLabelType:
+      type: string
+      enum: [official, common, recommended, proposed, descriptive]
+    SearchConfidenceBand:
+      type: string
+      enum: [established, likely, provisional, site_proposal]
+    SearchCandidate:
+      type: object
+      required: [wordId, slug, candidateName, originalTerm, conciseMeaning, confidenceBand, evidenceTypes, isSiteProposal, relevanceScore, explanation]
+      properties:
+        wordId:
+          type: number
+          format: int32
+        slug:
+          type: string
+        candidateName:
+          type: string
+        originalTerm:
+          type: string
+        conciseMeaning:
+          type: string
+        confidenceBand:
+          $ref: "#/components/schemas/SearchConfidenceBand"
+        evidenceTypes:
+          type: array
+          items:
+            type: string
+        isSiteProposal:
+          type: boolean
+        relevanceScore:
+          type: number
+          format: int32
+          minimum: 0
+          maximum: 100
+        explanation:
+          type: string
+    ProposedNameCandidate:
+      type: object
+      required: [name, rationale, confidenceBand]
+      properties:
+        name:
+          type: string
+        rationale:
+          type: string
+        confidenceBand:
+          type: string
+          enum: [site_proposal]
+    SearchInference:
+      type: object
+      required: [query, intentSummary, uncertaintyNotice, aiUsed, primaryCandidate, alternativeCandidates, proposedNames]
+      properties:
+        query:
+          type: string
+        intentSummary:
+          type: string
+        uncertaintyNotice:
+          type: string
+        aiUsed:
+          type: boolean
+        primaryCandidate:
+          $ref: "#/components/schemas/SearchCandidate"
+        alternativeCandidates:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchCandidate"
+        proposedNames:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProposedNameCandidate"
+    WordLink:
+      type: object
+      required: [slug, label]
+      properties:
+        slug:
+          type: string
+        label:
+          type: string
+    UpdateHistoryEntry:
+      type: object
+      required: [date, note]
+      properties:
+        date:
+          type: string
+          format: date
+        note:
+          type: string
+    Word:
+      type: object
+      required:
+        - id
+        - slug
+        - englishTerm
+        - proposedJapanese
+        - definition
+        - literalTranslation
+        - category
+        - categoryLarge
+        - categoryMiddle
+        - categorySmall
+        - tags
+        - semanticKeywords
+        - status
+        - originPeriod
+        - originContext
+        - overseasUsage
+        - existingJapaneseTranslation
+        - proposalReason
+        - relatedTerms
+        - similarTerms
+        - antonymTerms
+        - sources
+        - firstDefinedAt
+        - updatedAt
+        - viewCount
+        - verifiedBotReferenceCount
+        - totalReferenceCount
+        - externalSourceCount
+        - independentSourceCount
+        - trustScore
+        - trustLabel
+        - detectedAt
+        - entryType
+        - labelType
+        - shortAnswer
+        - aliases
+        - reading
+        - pronunciation
+        - originalLanguage
+        - officialLabel
+        - commonLabel
+        - mediaLabels
+        - usageStatus
+        - confidence
+        - updateHistory
+        - sourcePublishedAt
+        - sourceAttribution
+      properties:
+        id:
+          type: number
+          format: int32
+        slug:
+          type: string
+        englishTerm:
+          type: string
+        proposedJapanese:
+          type: string
+        definition:
+          type: string
+        literalTranslation:
+          type: string
+        category:
+          type: string
+        categoryLarge:
+          type: string
+        categoryMiddle:
+          type: string
+        categorySmall:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        semanticKeywords:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: "#/components/schemas/WordStatus"
+        originPeriod:
+          type: string
+        originContext:
+          type: string
+        overseasUsage:
+          type: string
+        existingJapaneseTranslation:
+          type: boolean
+        proposalReason:
+          type: string
+        relatedTerms:
+          type: array
+          items:
+            type: string
+        similarTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordLink"
+        antonymTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordLink"
+        sources:
+          type: array
+          items:
+            type: string
+        firstDefinedAt:
+          type: string
+          format: date
+        updatedAt:
+          type: string
+          format: date
+        viewCount:
+          type: number
+          format: int32
+          description: Human browser page views only
+        verifiedBotReferenceCount:
+          type: number
+          format: int32
+          description: References from explicitly identified search or AI crawlers
+        totalReferenceCount:
+          type: number
+          format: int32
+        externalSourceCount:
+          type: number
+          format: int32
+        independentSourceCount:
+          type: number
+          format: int32
+        trustScore:
+          type: number
+          format: int32
+          minimum: 0
+          maximum: 100
+        trustLabel:
+          type: string
+        detectedAt:
+          type: string
+          format: date
+        publishedAt:
+          type: [string, "null"]
+          format: date
+        entryType:
+          $ref: "#/components/schemas/WordEntryType"
+        labelType:
+          $ref: "#/components/schemas/WordLabelType"
+        shortAnswer:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        reading:
+          type: string
+        pronunciation:
+          type: string
+        originalLanguage:
+          type: string
+        officialLabel:
+          type: string
+        commonLabel:
+          type: string
+        mediaLabels:
+          type: array
+          items:
+            type: string
+        usageStatus:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/ConfidenceLevel"
+        updateHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/UpdateHistoryEntry"
+        sourcePublishedAt:
+          type: string
+        sourceAttribution:
+          type: string
+        monitoringStatus:
+          type: string
+          enum: [watching, candidate_detected, evidence_review, mainstream_confirmed, change_approved]
+        nameChangeCandidate:
+          type: string
+        definitionConfidence:
+          type: string
+          enum: [low, medium, high]
+        usageEvidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageEvidence"
+        nameChangeHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/NameChangeHistoryEntry"
+        lastMonitoredAt:
+          type: [string, "null"]
+          format: date
+        relevanceScore:
+          type: number
+          format: int32
+          minimum: 0
+          maximum: 100
+        matchReason:
+          type: string
+    WordInput:
+      type: object
+      required: [englishTerm, proposedJapanese, definition, category, status, entryType]
+      properties:
+        englishTerm:
+          type: string
+          minLength: 1
+        proposedJapanese:
+          type: string
+        definition:
+          type: string
+          minLength: 1
+        literalTranslation:
+          type: string
+        category:
+          type: string
+          minLength: 1
+        categoryLarge:
+          type: string
+        categoryMiddle:
+          type: string
+        categorySmall:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        semanticKeywords:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: "#/components/schemas/WordStatus"
+        entryType:
+          $ref: "#/components/schemas/WordEntryType"
+        labelType:
+          $ref: "#/components/schemas/WordLabelType"
+        shortAnswer:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        reading:
+          type: string
+        pronunciation:
+          type: string
+        originalLanguage:
+          type: string
+        officialLabel:
+          type: string
+        commonLabel:
+          type: string
+        mediaLabels:
+          type: array
+          items:
+            type: string
+        usageStatus:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/ConfidenceLevel"
+        originPeriod:
+          type: string
+        originContext:
+          type: string
+        overseasUsage:
+          type: string
+        existingJapaneseTranslation:
+          type: boolean
+        proposalReason:
+          type: string
+        relatedTerms:
+          type: array
+          items:
+            type: string
+        similarTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordLink"
+        antonymTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordLink"
+        sources:
+          type: array
+          items:
+            type: string
+        sourcePublishedAt:
+          type: string
+        sourceAttribution:
+          type: string
+        monitoringStatus:
+          type: string
+          enum: [watching, candidate_detected, evidence_review, mainstream_confirmed, change_approved]
+        nameChangeCandidate:
+          type: string
+        definitionConfidence:
+          type: string
+          enum: [low, medium, high]
+        usageEvidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageEvidence"
+        independentSourceCount:
+          type: number
+          format: int32
+          minimum: 0
+    WordUpdate:
+      type: object
+      properties:
+        proposedJapanese:
+          type: string
+        definition:
+          type: string
+        literalTranslation:
+          type: string
+        category:
+          type: string
+        categoryLarge:
+          type: string
+        categoryMiddle:
+          type: string
+        categorySmall:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        semanticKeywords:
+          type: array
+          items:
+            type: string
+        status:
+          $ref: "#/components/schemas/WordStatus"
+        entryType:
+          $ref: "#/components/schemas/WordEntryType"
+        labelType:
+          $ref: "#/components/schemas/WordLabelType"
+        shortAnswer:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        reading:
+          type: string
+        pronunciation:
+          type: string
+        originalLanguage:
+          type: string
+        officialLabel:
+          type: string
+        commonLabel:
+          type: string
+        mediaLabels:
+          type: array
+          items:
+            type: string
+        usageStatus:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/ConfidenceLevel"
+        originPeriod:
+          type: string
+        originContext:
+          type: string
+        overseasUsage:
+          type: string
+        existingJapaneseTranslation:
+          type: boolean
+        proposalReason:
+          type: string
+        relatedTerms:
+          type: array
+          items:
+            type: string
+        similarTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordLink"
+        antonymTerms:
+          type: array
+          items:
+            $ref: "#/components/schemas/WordLink"
+        sources:
+          type: array
+          items:
+            type: string
+        sourcePublishedAt:
+          type: string
+        sourceAttribution:
+          type: string
+        monitoringStatus:
+          type: string
+          enum: [watching, candidate_detected, evidence_review, mainstream_confirmed, change_approved]
+        nameChangeCandidate:
+          type: string
+        definitionConfidence:
+          type: string
+          enum: [low, medium, high]
+        usageEvidence:
+          type: array
+          items:
+            $ref: "#/components/schemas/UsageEvidence"
+        lastMonitoredAt:
+          type: string
+          format: date
+        changeNote:
+          type: string
+    UsageEvidence:
+      type: object
+      required: [excerpt, context, sourceType, sourceUrl, checkedAt]
+      properties:
+        excerpt: { type: string, maxLength: 240 }
+        context: { type: string }
+        sourceType: { type: string }
+        sourceUrl: { type: string }
+        checkedAt: { type: string, format: date }
+    NameChangeHistoryEntry:
+      type: object
+      required: [date, previousName, newName, reason, evidenceCount, sources]
+      properties:
+        date: { type: string, format: date }
+        previousName: { type: string }
+        newName: { type: string }
+        reason: { type: string }
+        evidenceCount: { type: number, format: int32 }
+        sources:
+          type: array
+          items: { type: string }
+    Category:
+      type: object
+      required: [name, large, middle, small, count]
+      properties:
+        name:
+          type: string
+        large:
+          type: string
+        middle:
+          type: string
+        small:
+          type: string
+        count:
+          type: number
+          format: int32
+    DashboardSummary:
+      type: object
+      required: [total, published, candidate, researching, naming, observing, totalViews, totalVerifiedBotReferences, totalReferences, candidatesToday, publishedToday, externalCitationCount, variationResolved, untranslatedProposed, pendingUpdates, externalMentions, aiCitations, targetWordCount, scheduledScansPerDay, dailyCandidateTarget, dailyPublishMin, dailyPublishMax]
+      properties:
+        total:
+          type: number
+          format: int32
+        published:
+          type: number
+          format: int32
+        candidate:
+          type: number
+          format: int32
+        researching:
+          type: number
+          format: int32
+        naming:
+          type: number
+          format: int32
+        observing:
+          type: number
+          format: int32
+        totalViews:
+          type: number
+          format: int32
+        totalVerifiedBotReferences:
+          type: number
+          format: int32
+        totalReferences:
+          type: number
+          format: int32
+        candidatesToday:
+          type: number
+          format: int32
+        publishedToday:
+          type: number
+          format: int32
+        externalCitationCount:
+          type: number
+          format: int32
+        variationResolved:
+          type: number
+          format: int32
+        untranslatedProposed:
+          type: number
+          format: int32
+        pendingUpdates:
+          type: number
+          format: int32
+        externalMentions:
+          type: number
+          format: int32
+        aiCitations:
+          type: number
+          format: int32
+        targetWordCount:
+          type: number
+          format: int32
+        scheduledScansPerDay:
+          type: number
+          format: int32
+        dailyCandidateTarget:
+          type: number
+          format: int32
+        dailyPublishMin:
+          type: number
+          format: int32
+        dailyPublishMax:
+          type: number
+          format: int32
 

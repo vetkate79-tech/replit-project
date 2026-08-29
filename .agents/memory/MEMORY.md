@@ -1,0 +1,1 @@
+- [Orval/Zod integer compatibility](orval-zod-integer-compatibility.md) — use OpenAPI number+int32 to avoid unsupported generated z.int calls.

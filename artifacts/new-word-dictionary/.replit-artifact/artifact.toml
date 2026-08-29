@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "新語辞典"
+description = "海外で生まれた新しい英語圏の概念やトレンド語を発見し、提案和名と定義を公開・観測する辞典型メディア兼運用基盤。検索しやすい1語1URLの公開ページと、候補登録から定着観測までの管理画面を備えます。"
+version = "1.0.0"
+id = "artifacts/new-word-dictionary"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22254
+
+[services.development]
+run = "pnpm --filter @workspace/new-word-dictionary run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/new-word-dictionary", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/new-word-dictionary/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22254"
+BASE_PATH = "/"
