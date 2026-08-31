@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>JRA AI Predictor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div class="eyebrow">JRA AI Predictor</div>
+      <h1>レースを選ぶだけ。<br>あとはAIが考える。</h1>
+      <p>競馬AIを、自分で作る必要はない。能力・展開・軸耐久性・買い目まで、ひとつの画面で。</p>
+      <div class="mode-switch" role="group" aria-label="表示モード">
+        <button class="mode-btn active" data-mode="simple">Simple</button>
+        <button class="mode-btn" data-mode="expert">Expert</button>
+      </div>
+    </header>
+
+    <section class="section-head">
+      <div>
+        <span class="kicker">TODAY</span>
+        <h2>今日のレース</h2>
+      </div>
+      <div class="legend"><span class="dot buy"></span>BUY <span class="dot caution"></span>CAUTION <span class="dot pass"></span>PASS</div>
+    </section>
+
+    <section id="raceList" class="race-grid" aria-live="polite"></section>
+
+    <section id="detail" class="detail-panel hidden" aria-live="polite">
+      <button id="backBtn" class="back-btn">← レース一覧へ</button>
+      <div id="detailContent"></div>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
